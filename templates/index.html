@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Title</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body>
+{% if Payment %}
+    {% if Payment == "success" %}
+        <div class="alert alert-success rounded-0" role="alert">
+            <div>
+                !!! hurrah !!! Payment finished successfully
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-danger rounded-0" role="alert">
+            <div>
+                Unfortunately payment failed
+            </div>
+        </div>
+    {% endif %}
+
+{% endif %}
+<main class="container my-3">
+    <h1 class="card-title text-primary-emphasis text-uppercase fw-bold">Stripe Integration</h1>
+    <ul class="nav nav-pills gap-2 mt-3 mb-4" id="myTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active shadow" id="session-tab" data-bs-toggle="tab"
+                    data-bs-target="#session-tab-pane"
+                    type="button" role="tab" aria-controls="session-tab-pane" aria-selected="true">
+                Session
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link shadow" id="subscription-tab" data-bs-toggle="tab"
+                    data-bs-target="#subscription-tab-pane"
+                    type="button" role="tab" aria-controls="subscription-tab-pane" aria-selected="false">
+                Subscription
+            </button>
+        </li>
+    </ul>
+    <div class="tab-content" id="sessionContent">
+        <div class="tab-pane fade show active" id="session-tab-pane" role="tabpanel" aria-labelledby="session-tab"
+             tabindex="0">
+            <div class="card border-0 shadow">
+                <div class="card-body">
+                    <div class="form-group my-2">
+                        <label for="currency" class="form-label">Currency</label>
+                        <input type="text" class="form-control" placeholder="enter your desired currency" value="usd"
+                               id="currency" name="currency">
+                        <small class="text-black-50">Hint: usd,eur...etc</small>
+                    </div>
+
+                    <div class="form-group my-2">
+                        <label for="title" class="form-label">Title</label>
+                        <input type="text" class="form-control" placeholder="enter your desired title"
+                               id="title" name="title" value="Varlam Zhordania Web Development Service">
+                        <small class="text-black-50">Hint: your product name or any title you like</small>
+                    </div>
+
+                    <div class="form-group my-2">
+                        <label for="amount" class="form-label">Amount</label>
+                        <input type="number" step="0.01" class="form-control" placeholder="enter your desired amount"
+                               id="amount" name="amount" value="10.00">
+                        <small class="text-black-50">Hint: total amount customer have to pay</small>
+                    </div>
+
+                    <button id="btn-pay-now" class="btn btn-dark btn-sm w-100 text-uppercase fw-bold">
+                        <i class="bi bi-stripe mx-1 shadow"></i>
+                        Pay Now
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="tab-content" id="subscriptionContent">
+        <div class="tab-pane fade show" id="subscription-tab-pane" role="tabpanel" aria-labelledby="subscription-tab"
+             tabindex="0">
+            <div class="card border-0 shadow">
+                <div class="card-body">
+                    <div class="form-group my-2">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" placeholder="enter customer email"
+                               value="admin@gmail.com"
+                               id="email" name="email">
+                        <small class="text-black-50">Hint: the email customer did register on your website</small>
+                    </div>
+
+                    <div class="form-group my-2">
+                        <label for="price-id" class="form-label">Price ID</label>
+                        <input type="text" class="form-control" placeholder="enter price id"
+                               id="price-id" name="price-id">
+                        <small class="text-black-50">
+                            Hint: put the price id you get when creating a product
+                            catalog for subscription
+                        </small>
+                    </div>
+
+                    <button id="btn-subscribe" class="btn btn-dark btn-sm w-100 text-uppercase fw-bold">
+                        <i class="bi bi-stripe mx-1 shadow"></i>
+                        Subscribe
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
+
+
+<script>
+    document.addEventListener("DOMContentLoaded", async () => {
+        const btnPay = document.querySelector("#btn-pay-now")
+        const btnSubscribe = document.querySelector("#btn-subscribe")
+
+        btnPay.addEventListener("click", async (e) => {
+            try {
+
+                const formData = {
+                    "currency": document.querySelector("#currency").value,
+                    "title": document.querySelector("#title").value,
+                    "amount": document.querySelector("#amount").value,
+                }
+
+                const response = await fetch("{% url 'checkout:checkoutSession' %}", {
+                    method: "post",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                    },
+                    body: JSON.stringify(formData)
+                })
+                const data = await response.json()
+                if (response.ok) {
+                    const {url} = data
+                    window.location.href = url
+                } else {
+                    let message_error = "";
+
+                    if (typeof data.error === "object") {
+                        Object.keys(data.error).forEach((key) => {
+                            message_error += `${key} : ${data.error[key]} \n`;
+                        });
+                    } else if (typeof data.error === "string") {
+                        message_error = data.error;
+                    } else {
+                        message_error = "An unknown error occurred.";
+                    }
+
+                    alert(message_error);
+                }
+
+
+            } catch (e) {
+                console.log(e)
+                alert("Something went wrong when trying to do session action")
+            }
+
+        })
+
+
+        btnSubscribe.addEventListener("click", async (e) => {
+            try {
+                const formData = {
+                    "email": document.querySelector("#email").value,
+                    "price_id": document.querySelector("#price-id").value,
+                }
+
+                const response = await fetch("{% url 'checkout:checkoutSubscription' %}", {
+                    method: "post",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                    },
+                    body: JSON.stringify(formData)
+                })
+                const data = await response.json()
+                if (response.ok) {
+                    const {url} = data
+                    window.location.href = url
+                } else {
+                    let message_error = ``
+                    Object.keys(data.error).forEach((key) => {
+                        message_error += `${key} : ${data.error[key]} \n`
+                    })
+                    alert(message_error)
+                }
+
+
+            } catch (e) {
+                console.log(e)
+                alert("Something went wrong when trying to do subscription action")
+            }
+
+        })
+    })
+</script>
+</body>
+</html>
