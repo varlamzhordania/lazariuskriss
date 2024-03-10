@@ -96,6 +96,8 @@ class CheckoutSessionView(APIView):
                 return Response({"error": str(ve)}, status=status.HTTP_400_BAD_REQUEST)
             except stripe.error.StripeError as se:
                 return Response({"error": str(se)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            except Exception as e:
+                return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -166,8 +168,72 @@ class CheckoutSubscriptionView(APIView):
                 return Response({"url": session.url})
             except stripe.error.StripeError as se:
                 return Response({"error": str(se)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            except Exception as e:
+                return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CheckoutCancelSubscriptionView(APIView):
+    """
+    API endpoint for canceling a Stripe subscription.
+
+    This view allows clients to cancel a subscription identified by the provided `subscription_id`.
+
+    Permissions:
+    - AllowAny: Accessible by anyone, as it's intended for subscription cancellation.
+
+    Methods:
+    - post: Handles the cancellation of a Stripe subscription.
+
+    Request Payload:
+    - subscription_id (str): The ID of the subscription to be canceled.
+
+    Returns:
+    - Response: JSON response indicating the success or failure of the subscription cancellation.
+    """
+
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        """
+        Cancel a Stripe subscription.
+
+        This method cancels a subscription identified by the provided `subscription_id`.
+
+        Args:
+        - request (Request): Django REST framework request object containing the subscription ID.
+
+        Returns:
+        - Response: JSON response indicating the success or failure of the subscription cancellation.
+        """
+
+        data = request.data
+        subscription_id = data.get("subscription_id")
+
+        if not subscription_id:
+            return Response({"error": "subscription_id field is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Retrieve the subscription from the database
+            subscription = Subscription.objects.get(stripe_subscription_id=subscription_id)
+
+            # Cancel the subscription using the Stripe API
+            stripe.Subscription.cancel(subscription.stripe_subscription_id)
+
+            # Optionally, mark the subscription as inactive in the database or let webhook handle it
+            subscription.active = False
+            subscription.save()
+
+            return Response({"message": "Subscription canceled successfully."}, status=status.HTTP_200_OK)
+
+        except stripe.error.StripeError as se:
+            return Response({"error": str(se)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Subscription.DoesNotExist:
+            return Response({"error": "Subscription not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class WebhookView(APIView):
@@ -241,6 +307,24 @@ class WebhookView(APIView):
                     "paid_amount": paid_amount / 100,
                 }
             )
+        elif event.type == 'customer.subscription.deleted':
+            data = event.data.object
+            subscription_id = data["id"]
+
+            try:
+                # Attempt to get the subscription from the database
+                subscription = Subscription.objects.get(stripe_subscription_id=subscription_id)
+
+                # Mark the subscription as inactive
+                subscription.active = False
+                subscription.save()
+
+            except Subscription.DoesNotExist:
+                # Handle the case where the subscription is not found
+                print(f"Subscription with ID {subscription_id} not found in the database.")
+            except Exception as e:
+                # Handle other exceptions that might occur during the process
+                print(f"An error occurred: {str(e)}")
 
         # Return a 200 OK response upon successful processing of the webhook event
         return Response(status=status.HTTP_200_OK)

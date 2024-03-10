@@ -42,6 +42,13 @@
                 Subscription
             </button>
         </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link shadow" id="cancel-subscription-tab" data-bs-toggle="tab"
+                    data-bs-target="#cancel-subscription-tab-pane"
+                    type="button" role="tab" aria-controls="cancel-subscription-tab-pane" aria-selected="false">
+                Cancel subscription
+            </button>
+        </li>
     </ul>
     <div class="tab-content" id="sessionContent">
         <div class="tab-pane fade show active" id="session-tab-pane" role="tabpanel" aria-labelledby="session-tab"
@@ -108,6 +115,29 @@
             </div>
         </div>
     </div>
+    <div class="tab-content" id="cancelSubscriptionContent">
+        <div class="tab-pane fade show" id="cancel-subscription-tab-pane" role="tabpanel"
+             aria-labelledby="cancel-subscription-tab"
+             tabindex="0">
+            <div class="card border-0 shadow">
+                <div class="card-body">
+                    <div class="form-group my-2">
+                        <label for="price-id" class="form-label">Subscription ID</label>
+                        <input type="text" class="form-control" placeholder="enter subscription ID"
+                               id="subscription-id" name="subscription_id">
+                        <small class="text-black-50">
+                            Hint: put the subscription id from subscription model or stripe dashboard
+                        </small>
+                    </div>
+
+                    <button id="btn-cancel-subscribe" class="btn btn-danger btn-sm w-100 text-uppercase fw-bold">
+                        <i class="bi bi-stripe mx-1 shadow"></i>
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
 </main>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
@@ -117,8 +147,9 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", async () => {
-        const btnPay = document.querySelector("#btn-pay-now")
-        const btnSubscribe = document.querySelector("#btn-subscribe")
+        const btnPay = document.querySelector("#btn-pay-now");
+        const btnSubscribe = document.querySelector("#btn-subscribe");
+        const btnCancelSubscribe = document.querySelector("#btn-cancel-subscribe");
 
         btnPay.addEventListener("click", async (e) => {
             try {
@@ -186,11 +217,62 @@
                     const {url} = data
                     window.location.href = url
                 } else {
-                    let message_error = ``
-                    Object.keys(data.error).forEach((key) => {
-                        message_error += `${key} : ${data.error[key]} \n`
-                    })
-                    alert(message_error)
+                    let message_error = "";
+
+                    if (typeof data.error === "object") {
+                        Object.keys(data.error).forEach((key) => {
+                            message_error += `${key} : ${data.error[key]} \n`;
+                        });
+                    } else if (typeof data.error === "string") {
+                        message_error = data.error;
+                    } else {
+                        message_error = "An unknown error occurred.";
+                    }
+
+                    alert(message_error);
+                }
+
+
+            } catch (e) {
+                console.log(e)
+                alert("Something went wrong when trying to do subscription action")
+            }
+
+        })
+
+
+        btnCancelSubscribe.addEventListener("click", async (e) => {
+            try {
+                const formData = {
+                    "subscription_id": document.querySelector("#subscription-id").value,
+                }
+
+                const response = await fetch("{% url 'checkout:checkoutCancelSubscription' %}", {
+                    method: "post",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                    },
+                    body: JSON.stringify(formData)
+                })
+                const data = await response.json()
+                if (response.ok) {
+                    const {message} = data
+                    alert(message)
+                } else {
+                    let message_error = "";
+
+                    if (typeof data.error === "object") {
+                        Object.keys(data.error).forEach((key) => {
+                            message_error += `${key} : ${data.error[key]} \n`;
+                        });
+                    } else if (typeof data.error === "string") {
+                        message_error = data.error;
+                    } else {
+                        message_error = "An unknown error occurred.";
+                    }
+
+                    alert(message_error);
                 }
 
 
