@@ -82,6 +82,7 @@ class CheckoutSessionView(APIView):
                             "quantity": 1,
                         }
                     ],
+                    billing_address_collection="required",
                 )
                 Transaction.objects.create(
                     currency=currency,
