@@ -26,7 +26,7 @@
 
 {% endif %}
 <main class="container my-3">
-    <h1 class="card-title text-primary-emphasis text-uppercase fw-bold">Stripe Integration</h1>
+    <h1 class="card-title text-primary-emphasis text-uppercase fw-bold">Stripe and Celery Integration</h1>
     <ul class="nav nav-pills gap-2 mt-3 mb-4" id="myTab" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link active shadow" id="session-tab" data-bs-toggle="tab"
@@ -47,6 +47,14 @@
                     data-bs-target="#cancel-subscription-tab-pane"
                     type="button" role="tab" aria-controls="cancel-subscription-tab-pane" aria-selected="false">
                 Cancel subscription
+            </button>
+        </li>
+
+        <li class="nav-item" role="presentation">
+            <button class="nav-link shadow" id="matcher-tab" data-bs-toggle="tab"
+                    data-bs-target="#matcher-tab-pane"
+                    type="button" role="tab" aria-controls="matcher-tab-pane" aria-selected="false">
+                Matcher
             </button>
         </li>
     </ul>
@@ -139,6 +147,47 @@
         </div>
     </div>
 
+    <div class="tab-content" id="matcherContent">
+        <div class="tab-pane fade show" id="matcher-tab-pane" role="tabpanel"
+             aria-labelledby="matcher-tab"
+             tabindex="0">
+            <div class="card border-0 shadow">
+                <div class="card-body">
+                    <div class="form-group my-2">
+                        <label for="matcher-username" class="form-label">Username</label>
+                        <input type="text" class="form-control" placeholder="enter username"
+                               id="matcher-username" name="text">
+                    </div>
+                    <div class="form-group my-2">
+                        <label for="matcher-level" class="form-label">User Level</label>
+                        <input type="text" class="form-control" placeholder="enter user level"
+                               id="matcher-level" name="text">
+                    </div>
+                    <div class="form-group my-2">
+                        <label for="matcher-lang" class="form-label">Language</label>
+                        <input type="text" class="form-control" placeholder="enter language name"
+                               id="matcher-lang" name="text">
+                    </div>
+                    <div class="form-group my-2">
+                        <label for="matcher-title" class="form-label">Title</label>
+                        <input type="text" class="form-control" placeholder="enter title"
+                               id="matcher-title" name="text">
+                    </div>
+                    <div class="form-group my-2">
+                        <label for="matcher-text" class="form-label">Text</label>
+                        <textarea class="form-control" id="matcher-text">
+                        </textarea>
+                    </div>
+
+                    <button id="btn-matcher-text" class="btn btn-dark btn-sm w-100 text-uppercase fw-bold">
+                        <i class="bi bi-cpu mx-1 shadow"></i>
+                        Process
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </main>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
@@ -150,6 +199,7 @@
         const btnPay = document.querySelector("#btn-pay-now");
         const btnSubscribe = document.querySelector("#btn-subscribe");
         const btnCancelSubscribe = document.querySelector("#btn-cancel-subscribe");
+        const btnMatcherText = document.querySelector("#btn-matcher-text");
 
         btnPay.addEventListener("click", async (e) => {
             try {
@@ -281,6 +331,51 @@
                 alert("Something went wrong when trying to do subscription action")
             }
 
+        })
+
+        btnMatcherText.addEventListener("click", async (e) => {
+            try {
+                const formData = {
+                    "username": document.querySelector("#matcher-username").value,
+                    "level": document.querySelector("#matcher-level").value,
+                    "language": document.querySelector("#matcher-lang").value,
+                    "title": document.querySelector("#matcher-title").value,
+                    "text": document.querySelector("#matcher-text").value,
+                }
+
+                const response = await fetch("{% url 'matcher:matcher' %}", {
+                    method: "post",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                    },
+                    body: JSON.stringify(formData)
+                })
+                const data = await response.json()
+                if (response.ok) {
+                    const {message} = data
+                    alert(message)
+                } else {
+                    let message_error = "";
+
+                    if (typeof data.error === "object") {
+                        Object.keys(data.error).forEach((key) => {
+                            message_error += `${key} : ${data.error[key]} \n`;
+                        });
+                    } else if (typeof data.error === "string") {
+                        message_error = data.error;
+                    } else {
+                        console.log(data)
+                        message_error = "An unknown error occurred.";
+                    }
+
+                    alert(message_error);
+                }
+
+            } catch (e) {
+                console.log(e)
+                alert("Something went wrong when trying to do Matcher action")
+            }
         })
     })
 </script>
