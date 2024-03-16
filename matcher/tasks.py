@@ -2,6 +2,7 @@
 from celery import shared_task
 from celery.result import AsyncResult
 import re
+import time
 
 
 def count_sentences(text, language_name):
@@ -73,3 +74,11 @@ def count_and_check_payment(username, language_name, title, text, user_level):
 
     except Exception as e:
         return {"error": str(e), "status": "error"}
+
+
+@shared_task
+def process_text():
+    print("Start processing text...")
+    time.sleep(3)
+    print("Finish processing text...")
+    return {"message": "Process finished", "status": "success"}
